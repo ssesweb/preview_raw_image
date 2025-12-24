@@ -9,6 +9,7 @@
 - 想快速提取嵌入的预览图，却需要复杂的专业软件；
 - 需要查看拍摄参数（相机型号、快门、光圈等），却找不到轻便的解析工具；
 - 提取的预览图丢失原始EXIF信息，影响后续整理。
+<img width="781" height="1565" alt="image" src="https://github.com/user-attachments/assets/942c0dc9-53ac-4529-9a16-faa6da0bdd9a" />
 
 RAW Insight 正是为解决这些问题而生，核心定位是「轻量、高效、专业」，无需安装厚重的专业软件，通过网页即可完成RAW文件的预览图提取、EXIF信息解析等操作。
 
