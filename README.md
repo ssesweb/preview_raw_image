@@ -50,7 +50,6 @@ RAW Insight 正是为解决这些问题而生，核心定位是「轻量、高�
 
 ```bash
 # 进入项目目录
-cd /www/wwwroot/raw_Image_output
 # 安装依赖（使用项目虚拟环境）
 pip install -r requirements.txt
 ```
