@@ -46,7 +46,27 @@ RAW Insight 正是为解决这些问题而生，核心定位是「轻量、高�
    - 配置端口（默认10099），启动Flask服务；
    - 配置Nginx反向代理，绑定域名（支持HTTPS）；
 4. 稳定性优化：添加定时任务自动清理过期文件，避免磁盘占用过高。
+### 1. 安装Python依赖
 
+```bash
+# 进入项目目录
+cd /www/wwwroot/raw_Image_output
+# 安装依赖（使用项目虚拟环境）
+pip install -r requirements.txt
+```
+### 2 该应用依赖`exiftool`工具解析RAW文件的EXIF和预览图，必须安装：
+
+#### 1. Ubuntu/Debian系统
+
+```bash
+apt update && apt install -y libimage-exiftool-perl
+```
+
+####  macOS系统
+
+```bash
+brew install exiftool
+```
 ## 四、使用场景与体验
 ### 1. 快速预览RAW文件
 上传RAW文件后，工具会自动解析并提取所有嵌入的预览图，无需等待完整文件解码，几秒钟就能看到清晰的预览效果，支持查看大图和下载JPEG/WebP格式。
