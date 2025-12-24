@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAW Insight - 专业原始影像解析工具</title>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --accent: #38bdf8;
+            --accent-hover: #0ea5e9;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-tertiary: #64748b;
+            --border: #2a3854;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: all 0.2s ease;
+        }
+        body { 
+            font-family: 'Inter', system-ui, -apple-system, sans-serif; 
+            background: var(--bg-primary); 
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        .container { 
+            width: 100%; 
+            max-width: 800px; 
+            margin: 0 auto;
+        }
+        .card { 
+            background: var(--bg-secondary); 
+            border: 1px solid var(--border); 
+            border-radius: 20px; 
+            padding: 30px; 
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
+        .header {
+            margin-bottom: 25px;
+        }
+        h1 { 
+            font-size: 24px; 
+            font-weight: 700; 
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+        }
+        .subtitle { 
+            color: var(--text-secondary); 
+            font-size: 14px; 
+            line-height: 1.5;
+        }
+        
+        /* 上传区域 */
+        .upload-area {
+            border: 2px dashed var(--border); 
+            border-radius: 16px; 
+            padding: 40px 20px;
+            text-align: center; 
+            cursor: pointer; 
+            background: rgba(42, 56, 84, 0.3);
+            margin-bottom: 20px;
+        }
+        .upload-area:hover, .upload-area.dragover { 
+            border-color: var(--accent); 
+            background: rgba(56, 189, 248, 0.05);
+        }
+        .upload-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+            color: var(--accent);
+        }
+        .upload-text {
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+        .upload-hint {
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+        input[type="file"] { display: none; }
+        
+        /* 加载状态 */
+        .loading { 
+            display: none; 
+            text-align: center; 
+            padding: 15px 0;
+        }
+        .loading-spinner {
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* EXIF面板 */
+        .exif-panel { 
+            display: none; 
+            margin: 20px 0;
+            background: var(--bg-tertiary);
+            border-radius: 16px;
+            padding: 20px;
+        }
+        .exif-section {
+            margin-bottom: 15px;
+        }
+        .exif-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: var(--accent);
+            padding-bottom: 5px;
+            border-bottom: 1px solid var(--border);
+        }
+        .exif-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+        }
+        .exif-item { font-size: 13px; }
+        .exif-label { 
+            color: var(--text-tertiary); 
+            display: block; 
+            font-size: 11px; 
+            text-transform: uppercase; 
+            margin-bottom: 2px;
+        }
+        .exif-value { font-weight: 600; }
+
+        /* 预览面板 */
+        .preview-panel { 
+            display: none; 
+            margin-top: 20px;
+        }
+        .preview-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--text-secondary);
+        }
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+        }
+        .preview-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .preview-img-container {
+            background: var(--bg-primary);
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 150px;
+            position: relative;
+        }
+        .preview-img {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 8px;
+            object-fit: contain;
+            background: #000;
+        }
+        .preview-loading {
+            position: absolute;
+            color: var(--text-tertiary);
+            font-size: 12px;
+        }
+        .preview-error {
+            color: var(--error);
+            font-size: 12px;
+            text-align: center;
+            padding: 20px;
+        }
+        .preview-format-tag {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: var(--warning);
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            opacity: 0.8;
+        }
+        .preview-info {
+            padding: 12px;
+        }
+        .preview-name {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        .preview-meta {
+            font-size: 11px;
+            color: var(--text-tertiary);
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+        .preview-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        /* 按钮样式 */
+        .btn { 
+            background: var(--accent); 
+            color: white; 
+            text-decoration: none; 
+            padding: 8px 16px; 
+            border-radius: 8px; 
+            font-size: 13px; 
+            font-weight: 600;
+            border: none; 
+            cursor: pointer; 
+            flex: 1;
+            min-width: 100px;
+            text-align: center;
+        }
+        .btn:hover { 
+            background: var(--accent-hover);
+        }
+        .btn-secondary { 
+            background: var(--bg-primary); 
+            border: 1px solid var(--border); 
+            color: var(--text-secondary);
+        }
+        .btn-secondary:hover {
+            background: var(--border);
+            color: var(--text-primary);
+        }
+        .btn-tertiary {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--warning);
+            font-size: 12px;
+            padding: 6px 12px;
+        }
+        .btn-tertiary:hover {
+            background: var(--border);
+            color: white;
+        }
+        .btn-hidden {
+            display: none;
+        }
+        
+        /* Toast提示 */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 20px;
+            color: var(--text-primary);
+            box-shadow: var(--shadow);
+            z-index: 999;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+        .toast.error { border-left: 4px solid var(--error); }
+        .toast.success { border-left: 4px solid var(--success); }
+        
+        /* 响应式 */
+        @media (max-width: 600px) {
+            .card { padding: 20px; }
+            .exif-grid { grid-template-columns: 1fr; }
+            .preview-grid { grid-template-columns: 1fr; }
+            .preview-actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <h1>RAW Insight</h1>
+                <p class="subtitle">专业RAW格式影像解析工具 | 提取嵌入预览图 & 查看完整EXIF信息<br>支持: CR3/CR2/NEF/ARW/DNG/RAF/RW2/ORF/3FR/IIQ 等格式</p>
+            </div>
+            
+            <label class="upload-area" id="dropZone">
+                <input type="file" id="rawFile" accept=".cr3,.cr2,.nef,.arw,.dng,.raf,.rw2,.orf,.3fr,.iiq,.pef,.sr2,.srw,.fff,.mef" onchange="handleFileSelect()">
+                <div class="upload-icon">📷</div>
+                <div id="uploadText" class="upload-text">点击选择文件或拖拽文件至此</div>
+                <div class="upload-hint">支持最大200MB的RAW文件 | 文件将在10分钟后自动清理</div>
+            </label>
+
+            <div id="loading" class="loading">
+                <div class="loading-spinner"></div>
+                <div style="color: var(--accent); font-size: 14px;">正在深度解析影像数据...</div>
+            </div>
+
+            <!-- EXIF信息面板 -->
+            <div id="exifPanel" class="exif-panel">
+                <!-- 文件信息 -->
+                <div class="exif-section">
+                    <div class="exif-section-title">文件信息</div>
+                    <div class="exif-grid">
+                        <div class="exif-item">
+                            <span class="exif-label">文件名</span>
+                            <span id="fileName" class="exif-value"></span>
+                        </div>
+                        <div class="exif-item">
+                            <span class="exif-label">文件大小</span>
+                            <span id="fileSize" class="exif-value"></span>
+                        </div>
+                        <div class="exif-item">
+                            <span class="exif-label">拍摄时间</span>
+                            <span id="shootTime" class="exif-value"></span>
+                        </div>
+                        <div class="exif-item">
+                            <span class="exif-label">文件格式</span>
+                            <span id="fileFormat" class="exif-value"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 相机信息 -->
+                <div class="exif-section">
+                    <div class="exif-section-title">相机信息</div>
+                    <div class="exif-grid">
+                        <div class="exif-item">
+                            <span class="exif-label">相机型号</span>
+                            <span id="cameraModel" class="exif-value"></span>
+                        </div>
+                        <div class="exif-item">
+                            <span class="exif-label">镜头型号</span>
+                            <span id="lensModel" class="exif-value"></span>
+                        </div>
+                        <div class="exif-item">
+                            <span class="exif-label">传感器尺寸</span>
+                            <span id="sensorSize" class="exif-value"></span>
+                        </div>
+                        <div class="exif-item">
+                            <span class="exif-label">分辨率</span>
+                            <span id="resolution" class="exif-value"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 曝光参数 -->
+                <div class="exif-section">
+                    <div class="exif-section-title">曝光参数</div>
+                    <div class="exif-grid">
+                        <div class="exif-item">
+                            <span class="exif-label">ISO感光度</span>
+                            <span id="isoValue" class="exif-value"></span>
+                        </div>
+                        <div class="exif-item">
+                            <span class="exif-label">快门速度</span>
+                            <span id="shutterSpeed" class="exif-value"></span>
+                        </div>
+                        <div class="exif-item">
+                            <span class="exif-label">光圈</span>
+                            <span id="apertureValue" class="exif-value"></span>
+                        </div>
+                        <div class="exif-item">
+                            <span class="exif-label">焦距</span>
+                            <span id="focalLength" class="exif-value"></span>
+                        </div>
+                        <div class="exif-item">
+                            <span class="exif-label">曝光补偿</span>
+                            <span id="exposureBias" class="exif-value"></span>
+                        </div>
+                        <div class="exif-item">
+                            <span class="exif-label">白平衡</span>
+                            <span id="whiteBalance" class="exif-value"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 预览提取面板 -->
+            <div id="previewPanel" class="preview-panel">
+                <div class="preview-title">检测到嵌入预览图（共<span id="previewCount">0</span>个）</div>
+                <div id="previewGrid" class="preview-grid"></div>
+                <button class="btn btn-secondary" style="width: 100%; margin-top: 20px;" onclick="resetUpload()">处理下一个文件</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast提示 -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        let currentFileId = '';
+        let currentExt = '';
+        let rawExifData = {};
+
+        // 定义Web兼容格式列表
+        const SUPPORTED_WEB_FORMATS = new Set(['JPEG', 'JPG', 'PNG', 'GIF', 'WebP', 'AVIF', 'SVG', 'BMP', 'ICO']);
+
+        // 初始化拖拽
+        document.addEventListener('DOMContentLoaded', () => {
+            const dropZone = document.getElementById('dropZone');
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('dragover');
+            });
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                if (e.dataTransfer.files.length > 0) {
+                    handleFile(e.dataTransfer.files[0]);
+                }
+            });
+        });
+
+        // 文件选择
+        function handleFileSelect() {
+            const file = document.getElementById('rawFile').files[0];
+            if (file) handleFile(file);
+        }
+
+        // 处理文件
+        function handleFile(file) {
+            // 验证大小
+            const maxSize = 200 * 1024 * 1024;
+            if (file.size > maxSize) {
+                showToast('文件大小超过200MB限制', 'error');
+                return;
+            }
+
+            // 更新显示
+            document.getElementById('uploadText').innerText = `已选择: ${file.name} (${formatFileSize(file.size)})`;
+            
+            // 上传解析
+            uploadFile(file);
+        }
+
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+
+        // 格式化快门速度（小数转分数）
+        function formatShutterSpeed(value) {
+            if (value === '未知' || !value) return '未知';
+            // 转换为分数（如0.008 → 1/125）
+            const num = parseFloat(value);
+            if (num > 0 && num <= 1) {
+                return `1/${Math.round(1/num)}`;
+            }
+            return value;
+        }
+
+        // 格式化镜头型号（数字转文字）
+        function formatLensModel(value) {
+            if (typeof value === 'number') {
+                // Canon镜头ID映射（补充常用值）
+                const lensMap = {
+                    61182: 'Canon EF 24-70mm f/2.8L II USM',
+                    59906: 'Canon EF 50mm f/1.4 USM',
+                    61442: 'Canon RF 24-70mm f/2.8 L IS USM',
+                    61698: 'Canon RF 50mm f/1.2 L USM'
+                };
+                return lensMap[value] || `未知镜头 (ID: ${value})`;
+            }
+            return value || '未知';
+        }
+
+        // 上传文件
+        async function uploadFile(file) {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('exifPanel').style.display = 'none';
+            document.getElementById('previewPanel').style.display = 'none';
+
+            const fd = new FormData();
+            fd.append('file', file);
+
+            try {
+                const resp = await fetch('/upload', { method: 'POST', body: fd });
+                if (!resp.ok) throw new Error(`HTTP错误: ${resp.status}`);
+                
+                const result = await resp.json();
+                document.getElementById('loading').style.display = 'none';
+
+                // 核心修复：严格校验返回结构
+                if (result.code !== 200 || !result.data) {
+                    showToast(result.error || '解析失败：返回数据异常', 'error');
+                    return;
+                }
+
+                const data = result.data;
+                // 保存全局数据
+                currentFileId = data.file_id || '';
+                currentExt = data.ext || '';
+                rawExifData = data.raw_exif || {};
+
+                // 渲染EXIF（增加默认值）
+                renderExif(data.parsed_exif || {});
+                
+                // 渲染预览图
+                renderPreviews(data.previews || []);
+                
+                showToast('文件解析成功！', 'success');
+
+            } catch (e) {
+                console.error('上传失败:', e);
+                showToast('解析失败: ' + e.message, 'error');
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        // 渲染EXIF信息（核心修复：增加所有字段的默认值）
+        function renderExif(exif) {
+            document.getElementById('exifPanel').style.display = 'block';
+            
+            // 文件信息（增加默认值）
+            document.getElementById('fileName').innerText = exif.fileName || '未知';
+            document.getElementById('fileSize').innerText = exif.fileSize || '未知';
+            document.getElementById('shootTime').innerText = exif.shootTime || '未知';
+            document.getElementById('fileFormat').innerText = (exif.fileFormat || '未知').toUpperCase();
+            
+            // 相机信息（格式化+默认值）
+            document.getElementById('cameraModel').innerText = exif.cameraModel || '未知';
+            document.getElementById('lensModel').innerText = formatLensModel(exif.lensModel);
+            document.getElementById('sensorSize').innerText = exif.sensorSize || '未知';
+            
+            // 分辨率（防undefined）
+            const width = exif.resolution?.width || '未知';
+            const height = exif.resolution?.height || '未知';
+            document.getElementById('resolution').innerText = `${width} × ${height}`;
+            
+            // 曝光参数（格式化+默认值）
+            document.getElementById('isoValue').innerText = exif.iso || '未知';
+            document.getElementById('shutterSpeed').innerText = formatShutterSpeed(exif.shutterSpeed);
+            document.getElementById('apertureValue').innerText = exif.aperture ? `f/${exif.aperture}` : '未知';
+            document.getElementById('focalLength').innerText = exif.focalLength ? `${exif.focalLength} mm` : '未知';
+            document.getElementById('exposureBias').innerText = exif.exposureBias || '未知';
+            document.getElementById('whiteBalance').innerText = exif.whiteBalance || '未知';
+
+            // 从原始EXIF补充更多字段（增强兼容性）
+            if (rawExifData) {
+                // 补充ISO
+                if (exif.iso === '未知') {
+                    const iso = rawExifData['MakerNotes:ISO'] || rawExifData['EXIF:ISO'] || '未知';
+                    document.getElementById('isoValue').innerText = iso;
+                }
+                // 补充快门
+                if (exif.shutterSpeed === '未知') {
+                    const shutter = rawExifData['EXIF:ExposureTime'] || rawExifData['MakerNotes:ExposureTime'] || '未知';
+                    document.getElementById('shutterSpeed').innerText = formatShutterSpeed(shutter);
+                }
+                // 补充光圈
+                if (exif.aperture === '未知') {
+                    const aperture = rawExifData['EXIF:FNumber'] || rawExifData['MakerNotes:Aperture'] || '未知';
+                    document.getElementById('apertureValue').innerText = aperture ? `f/${aperture}` : '未知';
+                }
+            }
+        }
+
+        // 渲染预览图列表（新增原始格式下载按钮）
+        function renderPreviews(previews) {
+            document.getElementById('previewPanel').style.display = 'block';
+            document.getElementById('previewCount').innerText = previews.length;
+            
+            const grid = document.getElementById('previewGrid');
+            grid.innerHTML = '';
+
+            if (previews.length === 0) {
+                grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:20px; color:var(--text-secondary);">未检测到可提取的预览图</div>';
+                return;
+            }
+
+            previews.forEach((preview, index) => {
+                // 跳过无效预览图
+                if (!preview || !preview.tag || !currentFileId) return;
+                
+                // 预览图类型名称
+                let previewType = getPreviewTypeName(preview.tag);
+                // 判断是否为Web兼容格式
+                const isWebFormat = SUPPORTED_WEB_FORMATS.has(preview.original_format || 'UNKNOWN');
+                // 原始格式和转换后格式
+                const originalFormat = preview.original_format || '未知';
+                const convertedFormat = preview.converted_format || 'JPEG';
+
+                // 创建预览卡片
+                const card = document.createElement('div');
+                card.className = 'preview-card';
+                card.innerHTML = `
+                    <div class="preview-img-container">
+                        <div class="preview-loading" id="previewLoading${index}">加载预览中...</div>
+                        ${!isWebFormat ? `<div class="preview-format-tag">${originalFormat} → ${convertedFormat}</div>` : ''}
+                        <img id="previewImg${index}" class="preview-img" alt="${previewType}" 
+                             onerror="handleImageError(${index})"
+                             style="display:none;">
+                    </div>
+                    <div class="preview-info">
+                        <div class="preview-name">${previewType} (${index+1})</div>
+                        <div class="preview-meta">
+                            分辨率: ${preview.resolution_str || '未知'}<br>
+                            ${isWebFormat ? `大小: ${preview.size_str || '未知'}` : `转换后大小: ${preview.size_str || '未知'}<br>原始大小: ${preview.raw_size_str || '未知'}`}<br>
+                            格式: ${isWebFormat ? originalFormat : `${originalFormat}（已转换为${convertedFormat}）`}
+                        </div>
+                        <div class="preview-actions">
+                            <a class="btn" href="/extract/${currentFileId}/${currentExt}/${preview.tag}" 
+                               download="${previewType}_${currentFileId.substring(0,8)}.${convertedFormat.toLowerCase()}">
+                                下载${convertedFormat}
+                            </a>
+                            <button class="btn btn-secondary" 
+                                    onclick="openPreview('/extract/${currentFileId}/${currentExt}/${preview.tag}')">
+                                查看大图
+                            </button>
+                            <a class="btn btn-tertiary ${isWebFormat ? 'btn-hidden' : ''}" 
+                               href="/extract_raw/${currentFileId}/${currentExt}/${preview.tag}"
+                               download="${previewType}_${currentFileId.substring(0,8)}.${originalFormat.toLowerCase()}">
+                                下载原始${originalFormat}
+                            </a>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+
+                // 延迟加载预览图（避免同时加载过多）
+                setTimeout(() => {
+                    const img = document.getElementById(`previewImg${index}`);
+                    const loading = document.getElementById(`previewLoading${index}`);
+                    if (!img || !loading) return;
+                    
+                    img.onload = function() {
+                        loading.style.display = 'none';
+                        img.style.display = 'block';
+                    };
+                    
+                    // 加时间戳防缓存
+                    img.src = `/extract/${currentFileId}/${currentExt}/${preview.tag}?t=${Date.now()}`;
+                }, index * 300); // 每隔300ms加载一个
+            });
+        }
+
+        // 图片加载错误处理
+        function handleImageError(index) {
+            const img = document.getElementById(`previewImg${index}`);
+            const loading = document.getElementById(`previewLoading${index}`);
+            if (img && loading) {
+                loading.style.display = 'none';
+                img.parentElement.innerHTML = `<div class=preview-error>预览图加载失败<br>可尝试下载原始文件</div>`;
+            }
+        }
+
+        // 获取预览图类型名称
+        function getPreviewTypeName(tag) {
+            if (!tag) return '预览图';
+            if (tag.includes('Thumbnail')) return '缩略图';
+            if (tag.includes('LargePreview')) return '高清预览图';
+            if (tag.includes('Preview')) return '标准预览图';
+            if (tag.includes('Embedded')) return '嵌入式预览图';
+            if (tag.includes('JpgFromRaw')) return '原始JPG图';
+            return '预览图';
+        }
+
+        // 打开大图预览
+        function openPreview(url) {
+            if (!url) {
+                showToast('预览图地址无效', 'error');
+                return;
+            }
+            const win = window.open('', '_blank');
+            win.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>预览图</title>
+                    <style>
+                        body { margin:0; background:#000; display:flex; align-items:center; justify-content:center; min-height:100vh; }
+                        img { max-width:95%; max-height:95vh; object-fit:contain; }
+                        .error { color:white; text-align:center; padding:20px; }
+                    </style>
+                </head>
+                <body>
+                    <img src="${url}?t=${Date.now()}" alt="预览图" onerror="this.parentNode.innerHTML='<div class=error>预览图加载失败</div>'">
+                </body>
+                </html>
+            `);
+            win.document.close();
+        }
+
+        // 重置上传状态
+        function resetUpload() {
+            document.getElementById('rawFile').value = '';
+            document.getElementById('uploadText').innerText = '点击选择文件或拖拽文件至此';
+            document.getElementById('exifPanel').style.display = 'none';
+            document.getElementById('previewPanel').style.display = 'none';
+            currentFileId = '';
+            currentExt = '';
+            rawExifData = {};
+        }
+
+        // Toast提示
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message || '操作提示';
+            toast.className = `toast ${type}`;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
